@@ -9,9 +9,9 @@ Run Spark several text queries jobs.
     positional arguments:
       data_file             Data file listing data files to query
       model_name            Data model to which data files conform:
-      ['books', 'papers', 'fmp','nzpp', 'generic_xml', 'nls', 'hdfs', 'psql']
+      ['books', 'papers', 'fmp','nzpp', 'generic_xml', 'nls', 'hdfs', 'psql', 'es']
       query_list            A file with the queries to run. For each query
-		            we have to indicate: query_module [query_configuration_file] [-r results_file]
+                            we have to indicate: query_module [query_configuration_file] [-r results_file]
        Example:
        defoe.nls.queries.normalize -r results.txt
        defoe.nls.queries.keysearch_by_year queries/sport.yml -r results_sc_sports
@@ -70,7 +70,7 @@ def main():
     """
     root_module = "defoe"
     setup_module = "setup"
-    models = ["books", "papers", "fmp", "nzpp", "generic_xml", "nls", "hdfs", "psql"]
+    models = ["books", "papers", "fmp", "nzpp", "generic_xml", "nls", "hdfs", "psql", "es"]
 
     parser = ArgumentParser(description="Run Spark text analysis job")
     parser.add_argument("data_file",
@@ -123,7 +123,7 @@ def main():
     context = SparkContext(conf=conf)
     log = context._jvm.org.apache.log4j.LogManager.getLogger(__name__)  # pylint: disable=protected-access
     
-    if (model_name!= "hdfs") and (model_name!= "psql"):
+    if (model_name!= "hdfs") and (model_name!= "psql") and (model_name!= "es"):
         # [filename,...]
         rdd_filenames = files_to_rdd(context, num_cores, data_file=data_file)
         # [(object, None)|(filename, error_message), ...]
@@ -148,7 +148,7 @@ def main():
     else: 
         ok_data=filename_to_object(data_file, context)
  
-	
+
     
    # Lets open the queries list and run each of them: 
     f = open(queries_list, "r")
@@ -158,10 +158,10 @@ def main():
     num_query=0
     for query in queries:
         query_l=query.rstrip()
-	arguments=query_l.split(" ")
+        arguments=query_l.split(" ")
         query_name = arguments[0]
         # Default Values for results and config_file:
-	query_config_file = None
+        query_config_file = None
         results_file = "results_"+str(num_query)+".yml"
   
         if arguments[1]:

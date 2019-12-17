@@ -46,7 +46,6 @@ class Page(object):
 
 
     def alto_parse(self, source):
-        print("!!!!source is %s" %source)
         xml = etree.parse(source)
         xmlns = xml.getroot().tag.split('}')[0].strip('{')
         return xml, xmlns
@@ -95,7 +94,7 @@ class Page(object):
                 for line in lines.findall('{%s}String' % self.namespaces):
                     text = line.attrib.get('CONTENT')
                     page_words.append(text)
-            self.page_words = list(map(unicode, page_words))
+            self.page_words = list(map(str,page_words))
         return self.page_words
 
     @property

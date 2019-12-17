@@ -3,13 +3,9 @@ Query-related utility functions.
 """
 
 from defoe import query_utils
-from defoe.query_utils import PreprocessWordType
+from defoe.query_utils import PreprocessWordType, longsfix_sentence
 from nltk.corpus import words
 import re
-# encoding=utf8
-import sys
-reload(sys)
-sys.setdefaultencoding('utf8')
 
 def get_page_matches(document,
                      keywords,
@@ -175,6 +171,48 @@ def get_page_as_string(page,
             page_string += (' ' + preprocessed_word)
     return page_string
 
+
+def clean_page_as_string(page):
+        
+    """
+    Clean a page as a single string,
+    Handling hyphenated words: combine and split and also fixing the long-s
+
+    :param page: Page
+    :type page: defoe.nls.Page
+    :return: clean page words as a string
+    :rtype: string or unicode
+    """
+    page_string = ''
+    for word in page.words:
+        if page_string == '':
+            page_string = word
+        else:
+            page_string += (' ' + word)
+
+    page_separete = page_string.split('- ')
+    page_combined = ''.join(page_separete)
+   
+    if (len(page_combined) > 1) and ('f' in page_combined): 
+       page_clean = longsfix_sentence(page_combined) 
+       return page_clean
+    else:
+        return page_combined
+
+def preprocess_clean_page(clean_page,
+                          preprocess_type=PreprocessWordType.LEMMATIZE):
+
+
+    clean_list = clean_page.split(' ') 
+    page_string = ''
+    for word in clean_list:
+        preprocessed_word = query_utils.preprocess_word(word,
+                                                         preprocess_type)
+        if page_string == '':
+            page_string = preprocessed_word
+        else:
+            page_string += (' ' + preprocessed_word)
+    return page_string
 
 def get_sentences_list_matches(text, keysentence):
     """

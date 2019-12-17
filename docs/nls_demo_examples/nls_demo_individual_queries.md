@@ -90,10 +90,12 @@ Everytime we run a query (e.g. defoe.nls.queries.total_documents or defoe.nls.qu
 Writing [pages to HDFS cvs file using dataframes](https://github.com/alan-turing-institute/defoe/blob/master/defoe/nls/queries/write_pages_df_hdfs.py) loads in memory all the pages and their metadata, applies all type of preprocess treatment ot the pages, create a dataframe, store data into the dataframe, and finally save the dataframe into HDFS using a csv file.  
 
 The information stored per page is the following:
-* title, edition, year, place, archive_filename, page_filename, page_id, num_pages, type_archive, model, page_string_norm, page_string_lemmatize, page_string_stem, num_page_words, num_page_words 
+"title",  "edition", "year", "place", "archive_filename",  "source_text_filename", "text_unit", "text_unit_id", "num_text_unit", "type_archive", "model", "source_text_raw", "source_text_clean", "source_text_norm", "source_text_lemmatize", "source_text_stem", "num_words". 
+
+In “source_text_clean”, I store the result of applying two modifications to the raw text (source_text_raw): 1) Handle hyphenated words and 2) fix the long-s. The pre-process treatments (*normalize*, *stem* and *lemmatize*) are applied to text stored in this field, and not from the raw one. Both, *stem* and *lemmatize*, they also include normalization.  . 
 
 
-We have to indicate the HDFS FILE inside **write_pages_df__hdfs.py** (e.g. "nls_demo.csv"). The query applies to the pages' words 4 type of preprocess treatment: *none*, *normalize*, *stem* and *lemmatize*. Both, *stem* and *lemmatize*, they also include normalization.  . 
+We have to indicate the HDFS FILE inside **write_pages_df__hdfs.py** (e.g. "nls_demo.csv"). 
 
   
 
@@ -126,11 +128,11 @@ xxx/nls -data-encyclopaediaBritannica/193916150
  hdfs dfs -getmerge /user/at003/rosa/nls_demo.csv nls_demo.csv
 ```
 
-Read pages (preprocessed or raw) as Dataframes from HDFS CSV file, and do a [keysentence search](https://github.com/alan-turing-institute/defoe/blob/master/defoe/hdfs/queries/keysearch_by_year.py) groupping results by year.
+Read pages (preprocessed or just clean) as Dataframes from HDFS CSV file, and do a [keysearch](https://github.com/alan-turing-institute/defoe/blob/master/defoe/hdfs/queries/keysearch_by_year.py) groupping results by year.
 
 In [hdfs_data.txt](https://github.com/alan-turing-institute/defoe/blob/master/hdfs_data.txt) we have to indicate the HDFS file that we want to read from (e.g. hdfs:///user/at003/rosa/nls_demo.csv)
 	
-In the configuration file (e.g.[queries/sport.yml](https://github.com/alan-turing-institute/defoe/blob/master/queries/sport.yml)) we have to indicate which preprocess treatment (e.g. none, normalize, etc.) we want to use in the query, so we can select the dataframe's columm (e.g. *page_string_raw*, *page_string_normalize*, etc.) according to that. 
+In the configuration file (e.g.[queries/sport.yml](https://github.com/alan-turing-institute/defoe/blob/master/queries/sport.yml)) we have to indicate which preprocess treatment (e.g. none, normalize, etc.) we want to use in the query, so we can select the dataframe's columm (e.g. *source_text_clean*, *source_text_norm*, etc.) according to that. 
 
 ```bash
 queries/sport.yml: 
@@ -150,12 +152,12 @@ results_ks_sports_tiny:
 '1773':
 - [tennis, 1]
 '1797':
-- [football, 1]
 - [golf, 1]
+- [football, 1]
 - [rugby, 1]
 - [bowls, 1]
 '1810':
-- [tennis, 14]
+- [tennis, 15]
 - [bowls, 1]
 '1815':
 - [football, 1]
@@ -165,26 +167,42 @@ results_ks_sports_tiny:
 '1824':
 - [bowls, 1]
 '1842':
-- [rugby, 1]
-- [football, 2]
 - [bowls, 5]
+- [football, 2]
+- [rugby, 1]
 '1853':
-- [football, 1]
-- [tennis, 1]
+- [rugby, 8]
 - [bowls, 4]
-- [rugby, 7]
+- [tennis, 1]
+- [football, 1]
+
 ```
+
 
 # Writing and Reading data from/to PostgreSQL database 
 
 Writing [pages to PostgresSQL database using dataframes](https://github.com/alan-turing-institute/defoe/blob/master/defoe/nls/queries/write_pages_df_psql.py) loads in memory all the pages and their metadata, applies all type of preprocess treatment ot the pages, create a dataframe, store data into the dataframe, and finally save the dataframe into a database table. Properties of the database to use can be specified by using a config file (e.g. [queries/db_properties.yml](https://github.com/alan-turing-institute/defoe/blob/master/queries/db_properties.yml))
 
 The information stored per page is the following:
-* title, edition, year, place, archive_filename, page_filename, page_id, num_pages, type_archive, model, page_string_norm, page_string_lemmatize, page_string_stem, num_page_words, num_page_words 
+"title",  "edition", "year", "place", "archive_filename",  "source_text_filename", "text_unit", "text_unit_id", "num_text_unit", "type_archive", "model", "source_text_raw", "source_text_clean", "source_text_norm", "source_text_lemmatize", "source_text_stem", "num_words". 
+
+In “source_text_clean”, I store the result of applying two modifications to the raw text (source_text_raw): 1) Handle hyphenated words and 2) fix the long-s. The pre-process treatments (*normalize*, *stem* and *lemmatize*) are applied to text stored in this field, and not from the raw one. Both, *stem* and *lemmatize*, they also include normalization.  . 
+
 
 ```bash
 spark-submit --driver-class-path $HOME/postgresql-42.2.8.jar --jars $HOME/postgresql-42.2.8.jar --py-files defoe.zip defoe/run_query.py nls_tiny.txt nls defoe.nls.queries.write_pages_df_psql queries/db_properties.yml  -r results -n 324 
 ```
+
+Notice that the properties of the database to use are indicated in a file --> queries/db_properties.yml:
+
+```bash
+host: ati-nid00006
+port: 55555
+database: defoe_db
+table: publication_page
+user: rfilguei2
+```
+
 
 Important:
 * You need to have the postgresql driver, or [download it](https://jdbc.postgresql.org/) and indicate it in the spark-submit command (see previous command). 
@@ -211,21 +229,31 @@ defoe_db=# \d+ publication_page
  year                  | bigint |           |          |         | plain    |              | 
  place                 | text   |           |          |         | extended |              | 
  archive_filename      | text   |           |          |         | extended |              | 
- page_filename         | text   |           |          |         | extended |              | 
- page_id               | text   |           |          |         | extended |              | 
- num_pages             | bigint |           |          |         | plain    |              | 
+ source_text_filename  | text   |           |          |         | extended |              | 
+ text_unit             | text   |           |          |         | extended |              | 
+ text_unit_id          | text   |           |          |         | extended |              | 
+ num_text_unit         | bigint |           |          |         | plain    |              | 
  type_archive          | text   |           |          |         | extended |              | 
  model                 | text   |           |          |         | extended |              | 
- page_string_raw       | text   |           |          |         | extended |              | 
- page_string_norm      | text   |           |          |         | extended |              | 
- page_string_lemmatize | text   |           |          |         | extended |              | 
- page_string_stem      | text   |           |          |         | extended |              | 
- num_page_words        | bigint |           |          |         | plain    |              | 
+ source_text_raw       | text   |           |          |         | extended |              | 
+ source_text_clean     | text   |           |          |         | extended |              | 
+ source_text_norm      | text   |           |          |         | extended |              | 
+ source_text_lemmatize | text   |           |          |         | extended |              | 
+ source_text_stem      | text   |           |          |         | extended |              | 
+ num_words             | bigint |           |          |         | plain    |              | 
+ 
+  
 ```
 
-Read pages (preprocessed or raw) as Dataframes from PostgreSQL database, and do a [keysentence search](https://github.com/alan-turing-institute/defoe/blob/master/defoe/psql/queries/keysearch_by_year.py) groupping results by year.
+Read pages (preprocessed or just clean) as Dataframes from PostgreSQL database, and do a [keysearch](https://github.com/alan-turing-institute/defoe/blob/master/defoe/psql/queries/keysearch_by_year.py) groupping results by year.
 
-In the configuration file (e.g.[queries/sport.yml](https://github.com/alan-turing-institute/defoe/blob/master/queries/sport.yml)) we have to indicate which preprocess treatment (e.g. none, normalize, etc.) we want to use in the query, so we can select the dataframe's columm (e.g. *page_string_raw*, *page_string_normalize*, etc.) according to that. 
+In the configuration file (e.g.[queries/sport.yml](https://github.com/alan-turing-institute/defoe/blob/master/queries/sport.yml)) we have to indicate which preprocess treatment (e.g. none, normalize, etc.) we want to use in the query, so we can select the dataframe's columm (e.g. *source_text_clean*, *source_text_norm*, etc.) according to that. 
+
+```bash
+queries/sport.yml: 
+	preprocess: normalize
+	data: sport.txt
+```
 
 ```bash
 spark-submit --driver-class-path $HOME/postgresql-42.2.8.jar --jars $HOME/postgresql-42.2.8.jar --py-files defoe.zip defoe/run_query.py db_data.txt psql defoe.psql.queries.keysearch_by_year queries/sport.yml  -r results_ks_sports_tiny -n 324
@@ -234,6 +262,55 @@ Important: A file with the database properties has to be specified (e.g.[db_data
 
 #host,port,db_name,user,driver,table_name
 ati-nid00006,55555,defoe_db,rfilguei2,org.postgresql.Driver,publication_page
+
+
+
+# Writing and Reading data to/from ElasticSearch (ES) 
+
+Writing [pages to ES  using dataframes](https://github.com/alan-turing-institute/defoe/blob/master/defoe/nls/queries/write_pages_df_es.py) loads in memory all the pages and their metadata, applies all type of preprocess treatment ot the pages, create a dataframe, store data into the dataframe, and finally save the dataframe into ES.
+
+The information stored per page is the following:
+"title",  "edition", "year", "place", "archive_filename",  "source_text_filename", "text_unit", "text_unit_id", "num_text_unit", "type_archive", "model", "source_text_raw", "source_text_clean", "source_text_norm", "source_text_lemmatize", "source_text_stem", "num_words". 
+
+In “source_text_clean”, I store the result of applying two modifications to the raw text (source_text_raw): 1) Handle hyphenated words and 2) fix the long-s. The pre-process treatments (*normalize*, *stem* and *lemmatize*) are applied to text stored in this field, and not from the raw one. Both, *stem* and *lemmatize*, they also include normalization.  . 
+
+
+```bash
+spark-submit --driver-class-path elasticsearch-hadoop-7.5.0/dist/elasticsearch-hadoop-7.5.0.jar --jars elasticsearch-hadoop-7.5.0/dist/elasticsearch-hadoop-7.5.0.jar  --py-files defoe.zip defoe/run_query.py nls-data.txt nls defoe.nls.queries.write_pages_df_es queries/es_properties.yml -r results -n 324
+```
+
+Notice that the properties of index and type name for ES are indicated in a file --> queries/es_properties.yml:
+
+
+```bash
+index: nls
+type_name: Encyclopaedia_Britannica
+```
+
+Important:
+* You need to have the elasticsearch-hadoop driver, or [download it](https://www.elastic.co/downloads/hadoop) and indicate it in the spark-submit command (see previous command). 
+
+
+Read pages (preprocessed or just clean) as Dataframes from ES, and do a [keysearch](https://github.com/alan-turing-institute/defoe/blob/master/defoe/es/queries/keysearch_by_year.py) groupping results by year.
+
+In the configuration file (e.g.[queries/sport.yml](https://github.com/alan-turing-institute/defoe/blob/master/queries/sport.yml)) we have to indicate which preprocess treatment (e.g. none, normalize, etc.) we want to use in the query, so we can select the dataframe's columm (e.g. *source_text_clean*, *source_text_norm*, etc.) according to that. 
+
+```bash
+queries/sport.yml: 
+	preprocess: normalize
+	data: sport.txt
+```
+
+```bash
+spark-submit --driver-class-path elasticsearch-hadoop-7.5.0/dist/elasticsearch-hadoop-7.5.0.jar --jars elasticsearch-hadoop-7.5.0/dist/elasticsearch-hadoop-7.5.0.jar --py-files defoe.zip defoe/run_query.py es_data.txt es defoe.es.queries.keysearch_by_year queries/sport.yml  -r results_ks_sports -n 324
+```
+
+Important: A file with the ES properties has to be specified (e.g.[es_data.txt](https://github.com/alan-turing-institute/defoe/blob/master/es_data.txt)). It has to have the following information (and in this order), separated by comma: 
+
+#index,type_name
+nls,Encyclopaedia_Britannica
+
+
 
 # Spark in a SHELL - Pyspark 
 
@@ -244,36 +321,55 @@ Reading **dataframes** from *HDFS*:
 ...     return when(col(x) != "", col(x)).otherwise(None)
 >> fdf = df.withColumn("page_string_norm", blank_as_null("page_string_norm"))
  
- >> newdf=fdf.filter(fdf.page_string_raw.isNotNull()).filter(fdf["model"]=="nls").select(fdf.year, fdf.page_string_raw)
- >> pages=newdf.rdd.map(tuple)
- >> nls_sample=pages.take(8)
- >> entry= nls_sample[8]
- >> year = entry[0]
- >> page_as_string = entry[1]
+>> newdf=fdf.filter(fdf.page_string_raw.isNotNull()).filter(fdf["model"]=="nls").select(fdf.year, fdf.page_string_raw)
+>> pages=newdf.rdd.map(tuple)
+>> nls_sample=pages.take(8)
+>> entry= nls_sample[8]
+>> year = entry[0]
+>> page_as_string = entry[1]
  
 ```
-
 
 Reading **dataframes** from *PostgreSQL*:
 ```bash
 pyspark --driver-class-path postgresql-42.2.8.jar --jars postgresql-42.2.8.jar
 from pyspark.sql import DataFrameReader
 
->>> from pyspark.sql import DataFrameReader
->>> url = 'postgresql://ati-nid00006:55555/defoe_db'
->>> properties = {'user': 'rfilguei2', 'driver': 'org.postgresql.Driver'}
->>> df = DataFrameReader(sqlContext).jdbc(url='jdbc:%s' % url, table='publication_page' , properties=properties)
+>> from pyspark.sql import DataFrameReader
+>> from pyspark.sql.functions import when, col
+>> url = 'postgresql://ati-nid00006:55555/defoe_db'
+>> properties = {'user': 'rfilguei2', 'driver': 'org.postgresql.Driver'}
+>> df = DataFrameReader(sqlContext).jdbc(url='jdbc:%s' % url, table='publication_page' , properties=properties)
 >> def blank_as_null(x):
 ...     return when(col(x) != "", col(x)).otherwise(None)
->> fdf = df.withColumn("page_string_norm", blank_as_null("page_string_norm"))
+>> fdf = df.withColumn("source_text_norm", blank_as_null("source_text_norm"))
  
- >> newdf=fdf.filter(fdf.page_string_raw.isNotNull()).filter(fdf["model"]=="nls").select(fdf.year, fdf.page_string_raw)
- >> pages=newdf.rdd.map(tuple)
- >> nls_sample=pages.take(8)
- >> entry= nls_sample[8]
- >> year = entry[0]
- >> page_as_string = entry[1]
- ```
+>> newdf=fdf.filter(fdf.source_text_clean.isNotNull()).filter(fdf["model"]=="nls").select(fdf.year, fdf.source_text_clean)
+>> pages=newdf.rdd.map(tuple)
+>> nls_sample=pages.take(7)
+>> entry= nls_sample[7]
+>> year = entry[0]
+>> page_as_string = entry[1]
+```
+
+Reading **dataframes** from *ES*:
+```bash
+pyspark --jars elasticsearch-hadoop-7.5.0/dist/elasticsearch-hadoop-7.5.0.jar 
+>> from pyspark.sql.functions import when, col
+>> reader = spark.read.format("org.elasticsearch.spark.sql").option("es.read.metadata", "true").option("es.nodes.wan.only","true").option("es.port","9200").option("es.net.ssl","false").option("es.nodes", "http://localhost")
+>> df = reader.load("nls/Encyclopaedia_Britannica")
+>> def blank_as_null(x):
+...     return when(col(x) != "", col(x)).otherwise(None)
+>> fdf = df.withColumn("source_text_norm", blank_as_null("source_text_norm"))
+ 
+>> newdf=fdf.filter(fdf.source_text_clean.isNotNull()).filter(fdf["model"]=="nls").select(fdf.year, fdf.source_text_clean)
+>> pages=newdf.rdd.map(tuple)
+>> nls_sample=pages.take(7)
+>> entry= nls_sample[7]
+>> year = entry[0]
+>> page_as_string = entry[1]
+```
+
 
 Reading **rdds**:
 ```bash
