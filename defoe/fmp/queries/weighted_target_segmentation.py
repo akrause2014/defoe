@@ -1,6 +1,12 @@
 """
 This query filters articles’ textblocks by selecting the ones that have one of the target word(s) AND any the keywords.
-Later it produces the segmentation/crop or the filtered texblocks. 
+Later it produces the segmentation/crop or the filtered textblocks.
+The results are ranked by the distance between the target word and the keyword found in the article.
+
+Run the query like this:
+```
+$SPARK_HOME/bin/spark-submit --py-files defoe.zip defoe/run_query.py data.txt fmp defoe.fmp.queries.weighted_target_segmentation queries/accident_targets.yml -r results_test.txt -n 4
+```
 """
 
 from defoe import query_utils

@@ -61,7 +61,7 @@ import yaml
 
 from pyspark import SparkContext, SparkConf
 
-from defoe.spark_utils import files_to_rdd, files_to_dataframe
+from defoe.spark_utils import files_to_rdd
 
 
 def main():
@@ -70,7 +70,7 @@ def main():
     """
     root_module = "defoe"
     setup_module = "setup"
-    models = ["books", "papers", "fmp", "nzpp", "generic_xml", "nls", "hdfs", "psql", "es"]
+    models = ["books", "papers", "fmp", "jisc", "nzpp", "generic_xml", "nls", "hdfs", "psql", "es"]
 
     parser = ArgumentParser(description="Run Spark text analysis job")
     parser.add_argument("data_file",
@@ -86,17 +86,15 @@ def main():
                         help="Query-specific configuration file")
     parser.add_argument("-n",
                         "--num_cores",
-                        nargs="?",
+                        type=int,
                         default=1,
                         help="Number of cores")
     parser.add_argument("-r",
                         "--results_file",
-                        nargs="?",
                         default="results.yml",
                         help="Query results file")
     parser.add_argument("-e",
                         "--errors_file",
-                        nargs="?",
                         default="errors.yml",
                         help="Errors file")
 
@@ -116,11 +114,7 @@ def main():
     assert model_name in models, ("'model' must be one of " + str(models))
 
     # Dynamically load model and query modules.
-    setup = importlib.import_module(root_module +
-                                    "." +
-                                    model_name +
-                                    "." +
-                                    setup_module)
+    setup = importlib.import_module(f'{root_module}.{model_name}.{setup_module}')
     query = importlib.import_module(query_name)
 
     filename_to_object = setup.filename_to_object
@@ -135,15 +129,11 @@ def main():
     context = SparkContext(conf=conf)
     log = context._jvm.org.apache.log4j.LogManager.getLogger(__name__)  # pylint: disable=protected-access
 
-    # Check the data_file size, just in case it is empty, which means that we just need to execute the query
-    # because the data has been already preprocessed and saved into HDFS | db. 
-
     if (model_name!= "hdfs") and (model_name!= "psql") and (model_name!= "es"):
         # [filename,...]
-        rdd_filenames = files_to_rdd(context, num_cores, data_file=data_file)
+        rdd_filenames = context.textFile(data_file, num_cores)
         # [(object, None)|(filename, error_message), ...]
-        data = rdd_filenames.map(
-             lambda filename: filename_to_object(filename))
+        data = rdd_filenames.map(filename_to_object)
 
         # [object, ...]
         ok_data = data \
@@ -167,8 +157,6 @@ def main():
     if results!="0":
         with open(results_file, "w") as f:
             f.write(yaml.safe_dump(dict(results)))
-
-      
 
 
 if __name__ == "__main__":
