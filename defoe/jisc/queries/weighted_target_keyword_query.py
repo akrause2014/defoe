@@ -82,7 +82,7 @@ def do_query(articles, config_file=None, logger=None, context=None):
                                               os.path.dirname(config_file))
     keywords = []
     with open(data_file, 'r') as f:
-        input_words = yaml.load(f, Loader=yaml.SafeLoader)
+        input_words = yaml.safe_load(f)
 
     target_words = set([query_utils.preprocess_word(word, preprocess_type) for word in input_words['targets']])
     keywords = set([query_utils.preprocess_word(word, preprocess_type) for word in input_words['keywords']])
