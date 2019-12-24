@@ -45,7 +45,7 @@ def find_words(
     targets = []
     preprocessed_words = []
     for pos, word in enumerate(article.article_words):
-        if word is not None:
+        if word.word is not None:
             preprocessed_word = query_utils.preprocess_word(word.word, preprocess_type)
             loc = WordLocation(
                 word=preprocessed_word,
