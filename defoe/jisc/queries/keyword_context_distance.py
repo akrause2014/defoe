@@ -5,7 +5,7 @@ XML JISC BL_newspaper/BL_article format.
 For example:
 
     $SPARK_HOME/bin/spark-submit --py-files defoe.zip defoe/run_query.py -n 4 -r results_jisc.yml \
-        data_jisc.txt jisc defoe.jisc.queries.keyword_and_excert_by_distance queries/accident_targets.yml
+        data_jisc.txt jisc defoe.jisc.queries.keyword_context_distance queries/accident_targets.yml
 
 '''
 
@@ -15,21 +15,24 @@ import os
 from defoe import query_utils
 from defoe.jisc.queries.utils import find_words
 
+CONTEXT_PADDING = 20 # number of words included in the context before and after a keyword or target word
+
 def extract_output(matched):
     path = matched.target.path
     if path.startswith('blob:'):
         path = path[len('blob:'):]
     target_pos = matched.target.position
     key_pos = matched.keyword.position
-    start_pos = max(0, min(target_pos-10, key_pos-10))
-    end_pos = min(len(matched.words), max(target_pos+10, key_pos+10))
-    excerpt = [word.word for word in matched.words[start_pos:end_pos]]
+    start_pos = max(0, min(target_pos-CONTEXT_PADDING, key_pos-CONTEXT_PADDING))
+    end_pos = min(len(matched.words), max(target_pos+CONTEXT_PADDING, key_pos+CONTEXT_PADDING))
+    context = ' '.join([word.word for word in matched.words[start_pos:end_pos]])
     return (matched.keyword.word, {
             "path": path,
-            "excerpt": excerpt,
+            "context": context,
             "target_word": matched.target.word,
             "keyword": matched.keyword.word,
-            "distance": matched.distance
+            "distance": matched.distance,
+            "size": len(matched.words)
         })
 
 def do_query(articles, config_file=None, logger=None, context=None):
